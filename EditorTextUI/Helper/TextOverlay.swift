@@ -26,7 +26,6 @@ class TextOverlay: BaseOverlay {
         textLayer.frame = frame
         textLayer.opacity = 0.0
         textLayer.displayIfNeeded()
-        print(textLayer)
         return textLayer
     }
 

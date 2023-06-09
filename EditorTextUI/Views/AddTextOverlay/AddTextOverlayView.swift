@@ -52,6 +52,9 @@ struct AddTextOverlayView: View {
                 .padding(.bottom, 12)
             }
         }
+        .onAppear {
+            focusedField = .textField
+        }
         .padding(.horizontal, 12)
         .navigationBar(leading: {
             Text("Cancel")

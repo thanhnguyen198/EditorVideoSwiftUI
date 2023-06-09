@@ -10,11 +10,13 @@ import SwiftUI
 import Combine
 
 struct LoadingView: View {
+    var progress: Float?
     var body: some View {
         ZStack {
             Color.black.opacity(0.2).blur(radius: 2)
+            let progress = progress ?? 0
             VStack {
-                Text("Loading...")
+                Text("Loading...\(progress == 0 ? "" : "\(Int(progress * 100))%")")
                     .font(.title3)
                     .foregroundColor(.white)
                 ProgressView()

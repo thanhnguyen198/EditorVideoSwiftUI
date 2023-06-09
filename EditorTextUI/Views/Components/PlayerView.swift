@@ -18,10 +18,12 @@ struct PlayerView: UIViewControllerRepresentable {
         view.player = player
         view.showsPlaybackControls = false
         view.videoGravity = .resizeAspect
+        print(player.status.rawValue)
         return view
     }
 
     func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
         uiViewController.player = player
+        print(uiViewController.player?.status.rawValue)
     }
 }

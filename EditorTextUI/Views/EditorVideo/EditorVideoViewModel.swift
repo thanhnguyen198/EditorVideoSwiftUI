@@ -17,8 +17,11 @@ class EditorVideoViewModel: ObservableObject {
     @Published var positionText: CGSize = .zero
     @Published var sizeText: CGSize = .zero
     @Published var geoVideo: CGSize = .zero
+    @Published var isExporting: Bool = false
+    @Published var progress: Float = 0.0
     init(url: URL) {
         self.url = url
+        print("Player with url:", url)
         avPlayer = .init(playerItem: .init(url: url))
         binding()
     }
@@ -28,7 +31,7 @@ class EditorVideoViewModel: ObservableObject {
 
     func saveVideo() {
         guard let textProp = textProp else { return }
-        let outputURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("output-\(Int(Date().timeIntervalSince1970)).mp4")
+        let outputURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("output-\(Int(Date().timeIntervalSince1970)).mov")
 
         let processor = VideoOverlayProcessor(inputURL: url, outputURL: outputURL)
 
@@ -42,14 +45,20 @@ class EditorVideoViewModel: ObservableObject {
                                       frame: CGRect(x: position.size.width, y: position.size.height, width: sizeText.width * position.ratio, height: sizeText.height * position.ratio),
                                       delay: 0.0,
                                       duration: videoDuration,
-                                      backgroundColor: UIColor.blue.withAlphaComponent(0.3),
+                                      backgroundColor: .clear,
                                       textColor: UIColor(textProp.color),
                                       font: .systemFont(ofSize: textProp.fontSize),
                                       textAlignment: .center,
                                       fontSize: textProp.fontSize * position.ratio)
         processor.addOverlay(textOverlay)
-        processor.process { exportSession in
+        isExporting = true
+        processor.$progress.assign(to: &$progress)
+        processor.process { [weak self] exportSession in
+            guard let self = self else { return }
             guard let exportSession = exportSession else { return }
+            DispatchQueue.main.async {
+                self.isExporting = false
+            }
             if exportSession.status == .completed {
                 DispatchQueue.main.async {
                     PHPhotoLibrary.shared().performChanges({
