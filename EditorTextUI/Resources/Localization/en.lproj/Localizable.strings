@@ -1,0 +1,9 @@
+/* 
+  Localizable.strings
+  SwiftUITemplate
+
+  Created by apple on 05/04/2023.
+  
+*/
+//HomeView
+"Home.today" = "Today";
