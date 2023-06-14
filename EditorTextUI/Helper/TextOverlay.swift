@@ -14,6 +14,7 @@ class TextOverlay: BaseOverlay {
     let font: UIFont
     let textAlignment: NSTextAlignment
     let fontSize: CGFloat
+    
     override var layer: CALayer {
         let textLayer = CATextLayer()
         textLayer.backgroundColor = backgroundColor.cgColor

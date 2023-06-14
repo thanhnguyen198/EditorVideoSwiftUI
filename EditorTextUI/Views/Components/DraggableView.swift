@@ -35,6 +35,8 @@ enum DragState {
 struct DraggableView<Content>: View where Content: View {
     @GestureState private var dragState = DragState.inactive
     @Binding var position: CGSize
+//    @Binding var width: Double
+//    @Binding var height: Double
     var content: () -> Content
 
     var body: some View {

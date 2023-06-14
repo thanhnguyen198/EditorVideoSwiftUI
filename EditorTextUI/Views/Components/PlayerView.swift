@@ -10,20 +10,18 @@ import SwiftUI
 
 struct PlayerView: UIViewControllerRepresentable {
     var player: AVPlayer
-
+    var videpGravity: AVLayerVideoGravity = .resizeAspect
     typealias UIViewControllerType = AVPlayerViewController
 
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let view = AVPlayerViewController()
         view.player = player
         view.showsPlaybackControls = false
-        view.videoGravity = .resizeAspect
-        print(player.status.rawValue)
+        view.videoGravity = videpGravity
         return view
     }
 
     func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
         uiViewController.player = player
-        print(uiViewController.player?.status.rawValue)
     }
 }

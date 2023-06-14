@@ -51,7 +51,9 @@ struct VideoPicker: UIViewControllerRepresentable {
                 let newUrl = URL(fileURLWithPath: NSTemporaryDirectory() + fileName)
                 // copy item to APP Storage
                 try? FileManager.default.copyItem(at: url, to: newUrl)
-                self.parent.url = newUrl
+                DispatchQueue.main.async {
+                    self.parent.url = newUrl
+                }
             }
         }
     }

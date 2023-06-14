@@ -6,6 +6,9 @@ import SwiftUI
 struct EditorVideoView: View {
     @StateObject var viewModel: EditorVideoViewModel
     @State var position: CGSize = .zero
+    @State var showPickerVideo: Bool = false
+    @State var width: Double = 250
+    @State var height: Double = 400
     let router: EditorVideoRouter
 
     var body: some View {
@@ -14,10 +17,7 @@ struct EditorVideoView: View {
                 ZStack {
                     GeometryReader { proxy in
                         PlayerView(player: viewModel.avPlayer)
-//                        VideoPlayer(player: viewModel.avPlayer)
-//                            .disabled(true)
                             .onAppear {
-                                viewModel.avPlayer.play()
                                 viewModel.geoVideo = proxy.size
                             }
                             .frame(width: kScreenSize.width)
@@ -25,17 +25,43 @@ struct EditorVideoView: View {
 
                     DraggableView(position: $viewModel.positionText) {
                         ZStack {
-                            if let textOv = viewModel.textProp {
-                                Text(textOv.text)
-                                    .foregroundColor(textOv.color)
-                                    .font(.system(size: textOv.fontSize))
-                                    .multilineTextAlignment(textOv.alignment)
-                                    .frame(minWidth: 0, maxWidth: .infinity)
-                                    .readSize { size in
-                                        viewModel.sizeText = size
-                                    }
-                            } else {
-                                EmptyView()
+//                            if let textOv = viewModel.textProp {
+//                                Text(textOv.text)
+//                                    .foregroundColor(textOv.color)
+//                                    .font(.system(size: textOv.fontSize))
+//                                    .multilineTextAlignment(textOv.alignment)
+//                                    .frame(minWidth: 0, maxWidth: .infinity)
+//                                    .readSize { size in
+//                                        viewModel.sizeText = size
+//                                    }
+//                            } else {
+//                                EmptyView()
+//                            }
+
+                            if let subVideo = viewModel.subVideoURL {
+                                ZStack(alignment: .bottomTrailing) {
+                                    PlayerView(player: .init(url: subVideo), videpGravity: .resize)
+                                        .clipped()
+                                        .frame(width: width, height: height)
+                                        .overlay(.blue.opacity(0.3))
+                                        .id(subVideo.url.absoluteString)
+                                        .readSize { size in
+                                            viewModel.sizeSubVideo = size
+                                        }
+                                    Color.red
+                                        .frame(width: 40, height: 40)
+                                        .gesture(
+                                            DragGesture()
+                                                .onChanged({ value in
+                                                    width = max(100, width + value.translation.width)
+                                                    height = max(100, height + value.translation.height)
+
+                                                })
+                                        )
+                                }
+                                .frame(width: width, height: height, alignment: .center)
+                                .border(.red, width: 5)
+                                .background(.yellow)
                             }
                         }
                     }
@@ -53,6 +79,15 @@ struct EditorVideoView: View {
                             viewModel.textProp = textOverlay
                         }))
                     }
+                    ButtonEditorText(title: "Sub Video") {
+                        Image(systemName: "video")
+                            .foregroundColor(.white)
+                            .font(.system(size: 12), weight: .bold)
+                            .scaleEffect(1.4)
+                    }
+                    .onPress {
+                        showPickerVideo.toggle()
+                    }
                     Spacer()
                 }
                 .padding(.horizontal, 12)
@@ -61,7 +96,9 @@ struct EditorVideoView: View {
                 LoadingView(progress: viewModel.progress)
             }
         }
-
+        .sheet(isPresented: $showPickerVideo, content: {
+            VideoPicker(url: $viewModel.subVideoURL)
+        })
         .navigationBar(leading: {
             Text("Cancel")
                 .foregroundColor(.black)
