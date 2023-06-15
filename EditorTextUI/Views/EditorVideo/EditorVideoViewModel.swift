@@ -14,6 +14,7 @@ class EditorVideoViewModel: ObservableObject {
     let url: URL
     @Published var avPlayer = AVPlayer()
     @Published var geoVideo: CGSize = .zero
+    @Published var imageOverlay: UIImage?
     @Published var subVideoURL: URL?
     @Published var textProp: TextProp?
     @Published var positionText: CGSize = .zero
@@ -72,13 +73,15 @@ class EditorVideoViewModel: ObservableObject {
             processor.addOverlay(subVideo)
         }
         // IMAGE-STICKER
-        let position = convertSize(positionImage, sizeText: sizeImage, fromFrame: geoVideo, toFrame: videoSize)
-        let imageOverlay = ImageOverlay(image: Assets._4k_uiImage,
-                                        frame: CGRect(x: position.size.width, y: position.size.height,
-                                                      width: sizeImage.width * position.ratio, height: sizeImage.height * position.ratio),
-                                        delay: 0.0,
-                                        duration: videoDuration)
-        processor.addOverlay(imageOverlay)
+        if let imageOverlay = imageOverlay {
+            let position = convertSize(positionImage, sizeText: sizeImage, fromFrame: geoVideo, toFrame: videoSize)
+            let imageOverlay = ImageOverlay(image: imageOverlay,
+                                            frame: CGRect(x: position.size.width, y: position.size.height,
+                                                          width: sizeImage.width * position.ratio, height: sizeImage.height * position.ratio),
+                                            delay: 0.0,
+                                            duration: videoDuration)
+            processor.addOverlay(imageOverlay)
+        }
 
         isExporting = true
         processor.$progress.assign(to: &$progress)

@@ -80,11 +80,12 @@ struct DraggableView<Content>: View where Content: View {
 //                .gesture(
 //                    DragGesture(minimumDistance: 10)
 //                        .onChanged({ value in
+//                            guard let width = width, let height = height else {
+//                                return
+//                            }
 //                            let transaltionSize = value.translation
-//                            print(value.location)
-//                            print(value.translation)
-//                            width = max(100, width + transaltionSize.width)
-//                            height = max(100, height + transaltionSize.height)
+//                            self.width = max(100, width + transaltionSize.width)
+//                            self.height = max(100, height + transaltionSize.height)
 //                            onEnd(.init(width: width, height: height), position)
 //                        })
 //                )

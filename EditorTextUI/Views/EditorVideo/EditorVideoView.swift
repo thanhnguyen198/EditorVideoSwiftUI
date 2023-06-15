@@ -7,6 +7,7 @@ struct EditorVideoView: View {
     @StateObject var viewModel: EditorVideoViewModel
     @State var position: CGSize = .zero
     @State var showPickerVideo: Bool = false
+    @State var showPickerImage: Bool = false
     @State var width: Double = 150
     @State var height: Double = 150
     let router: EditorVideoRouter
@@ -57,12 +58,17 @@ struct EditorVideoView: View {
                     }
 
                     DraggableView {
-                        Assets._4k
-                            .resizable()
-                            .frame(width: 150, height: 150)
-                            .readSize { size in
-                                viewModel.sizeImage = size
+                        ZStack {
+                            if let image = viewModel.imageOverlay {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .frame(width: 150, height: 150)
+                                    .readSize { size in
+                                        viewModel.sizeImage = size
+                                    }
                             }
+                        }
+
                     } onEnd: { _, position in
                         viewModel.positionImage = position
                     }
@@ -93,6 +99,15 @@ struct EditorVideoView: View {
                     .onPress {
                         showPickerVideo.toggle()
                     }
+                    ButtonEditorText(title: "Image") {
+                        Image(systemName: "photo")
+                            .foregroundColor(.white)
+                            .font(.system(size: 12), weight: .bold)
+                            .scaleEffect(1.4)
+                    }
+                    .onPress {
+                        showPickerImage.toggle()
+                    }
                     Spacer()
                 }
                 .padding(.horizontal, 12)
@@ -101,6 +116,10 @@ struct EditorVideoView: View {
                 LoadingView(progress: viewModel.progress)
             }
         }
+        .padding(.top, 12)
+        .sheet(isPresented: $showPickerImage, content: {
+            ImagePicker(selectedImage: $viewModel.imageOverlay)
+        })
         .sheet(isPresented: $showPickerVideo, content: {
             VideoPicker(url: $viewModel.subVideoURL)
         })
