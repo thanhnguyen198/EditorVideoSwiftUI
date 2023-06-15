@@ -10,13 +10,6 @@ import Foundation
 // swiftlint:disable explicit_type_interface function_parameter_count identifier_name line_length
 // swiftlint:disable nesting type_body_length type_name vertical_whitespace_opening_braces
 public enum Strings {
-  public enum Home {
-    /// Localizable.strings
-    ///   SwiftUITemplate
-    /// 
-    ///   Created by apple on 05/04/2023.
-    public static let today = Strings.tr("Localizable", "Home.today", fallback: "Today")
-  }
 }
 // swiftlint:enable explicit_type_interface function_parameter_count identifier_name line_length
 // swiftlint:enable nesting type_body_length type_name vertical_whitespace_opening_braces

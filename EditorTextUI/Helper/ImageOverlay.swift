@@ -16,6 +16,7 @@ class ImageOverlay: BaseOverlay {
         imageLayer.contents = image.cgImage
         imageLayer.backgroundColor = backgroundColor.cgColor
         imageLayer.frame = frame
+        imageLayer.contentsGravity = .resize
         imageLayer.opacity = 0.0
 
         return imageLayer

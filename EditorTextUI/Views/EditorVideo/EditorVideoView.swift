@@ -7,8 +7,8 @@ struct EditorVideoView: View {
     @StateObject var viewModel: EditorVideoViewModel
     @State var position: CGSize = .zero
     @State var showPickerVideo: Bool = false
-    @State var width: Double = 250
-    @State var height: Double = 400
+    @State var width: Double = 150
+    @State var height: Double = 150
     let router: EditorVideoRouter
 
     var body: some View {
@@ -20,52 +20,57 @@ struct EditorVideoView: View {
                             .onAppear {
                                 viewModel.geoVideo = proxy.size
                             }
-                            .frame(width: kScreenSize.width)
                     }
-
-                    DraggableView(position: $viewModel.positionText) {
+                    // Text
+                    DraggableView {
                         ZStack {
-//                            if let textOv = viewModel.textProp {
-//                                Text(textOv.text)
-//                                    .foregroundColor(textOv.color)
-//                                    .font(.system(size: textOv.fontSize))
-//                                    .multilineTextAlignment(textOv.alignment)
-//                                    .frame(minWidth: 0, maxWidth: .infinity)
-//                                    .readSize { size in
-//                                        viewModel.sizeText = size
-//                                    }
-//                            } else {
-//                                EmptyView()
-//                            }
-
-                            if let subVideo = viewModel.subVideoURL {
-                                ZStack(alignment: .bottomTrailing) {
-                                    PlayerView(player: .init(url: subVideo), videpGravity: .resize)
-                                        .clipped()
-                                        .frame(width: width, height: height)
-                                        .overlay(.blue.opacity(0.3))
-                                        .id(subVideo.url.absoluteString)
-                                        .readSize { size in
-                                            viewModel.sizeSubVideo = size
-                                        }
-                                    Color.red
-                                        .frame(width: 40, height: 40)
-                                        .gesture(
-                                            DragGesture()
-                                                .onChanged({ value in
-                                                    width = max(100, width + value.translation.width)
-                                                    height = max(100, height + value.translation.height)
-
-                                                })
-                                        )
-                                }
-                                .frame(width: width, height: height, alignment: .center)
-                                .border(.red, width: 5)
-                                .background(.yellow)
+                            if let textOv = viewModel.textProp {
+                                Text(textOv.text)
+                                    .foregroundColor(textOv.color)
+                                    .font(.system(size: textOv.fontSize))
+                                    .multilineTextAlignment(textOv.alignment)
+                                    .frame(minWidth: 0, maxWidth: .infinity)
+                                    .readSize { size in
+                                        viewModel.sizeText = size
+                                    }
+                            } else {
+                                EmptyView()
                             }
                         }
+                    } onEnd: { _, position in
+                        viewModel.positionText = position
+                    }
+                    // Video
+                    DraggableView(width: width, height: height) {
+                        ZStack {
+                            if let subVideo = viewModel.subVideoURL {
+                                PlayerView(player: .init(url: subVideo), videoGravity: .resize)
+                                    .clipped()
+                                    .id(subVideo.url.absoluteString)
+                            } else {
+                                EmptyView()
+                            }
+                        }
+                    } onEnd: { size, position in
+                        viewModel.positionSubVideo = position
+                        viewModel.sizeSubVideo = size
+                    }
+
+                    DraggableView {
+                        Assets._4k
+                            .resizable()
+                            .frame(width: 150, height: 150)
+                            .readSize { size in
+                                viewModel.sizeImage = size
+                            }
+                    } onEnd: { _, position in
+                        viewModel.positionImage = position
                     }
                 }
+                .frame(width: kScreenSize.width, height: kScreenSize.height / 2)
+
+                Spacer()
+
                 HStack {
                     ButtonEditorText(title: "Text") {
                         Image(systemName: "character")

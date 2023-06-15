@@ -23,10 +23,9 @@ class VideoOverlayProcessor: ObservableObject {
         let asset = AVURLAsset(url: inputURL)
         let track = asset.tracks(withMediaType: AVMediaType.video).first
         if let track = track, isPortrait(track.preferredTransform) {
-            let naturalSize = track.naturalSize
-            return .init(width: naturalSize.height, height: naturalSize.width)
+            return .init(width: 1080, height: 1964)
         } else {
-            return track?.naturalSize ?? .zero
+            return .init(width: 1964, height: 1080)
         }
     }
 
@@ -99,21 +98,24 @@ class VideoOverlayProcessor: ObservableObject {
 
         let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: compositionVideoTrack)
         let videoTrackTransform = compositionVideoTrack.preferredTransform
-        var naturalSize: CGSize = .zero
+        let naturalSize: CGSize = videoSize
         if isPortrait(videoTrackTransform) {
-            naturalSize = CGSize(width: videoTrack.naturalSize.height, height: videoTrack.naturalSize.width)
-            let videoTransform = CGAffineTransform(rotationAngle: .pi / 2).concatenating(CGAffineTransform(translationX: naturalSize.width, y: 0))
-            layerInstruction.setTransform(videoTransform, at: .zero)
+            let scale = max(naturalSize.width / videoTrack.naturalSize.height,
+                            naturalSize.height / videoTrack.naturalSize.width)
+            let videoTransform = CGAffineTransform(rotationAngle: .pi / 2)
+                .concatenating(CGAffineTransform(translationX: naturalSize.width, y: 0))
+            layerInstruction.setTransform(videoTransform.scaledBy(x: scale, y: scale), at: .zero)
         } else {
-            naturalSize = videoTrack.naturalSize
-            layerInstruction.setTransform(videoTrackTransform, at: .zero)
+            let scale = max(naturalSize.width / videoTrack.naturalSize.width,
+                            naturalSize.height / videoTrack.naturalSize.height)
+            layerInstruction.setTransform(videoTrackTransform.concatenating(CGAffineTransform(scaleX: scale, y: scale)), at: .zero)
         }
 
         overlayLayer.frame = CGRect(x: 0, y: 0, width: naturalSize.width, height: naturalSize.height)
         videoLayer.frame = CGRect(x: 0, y: 0, width: naturalSize.width, height: naturalSize.height)
         overlayLayer.addSublayer(videoLayer)
 
-        for overlay in overlays where overlay is TextOverlay {
+        for overlay in overlays.filter({ $0 is TextOverlay || $0 is ImageOverlay }) {
             let layer = overlay.layer
             layer.add(overlay.startAnimation, forKey: "startAnimation")
             layer.add(overlay.endAnimation, forKey: "endAnimation")
@@ -140,18 +142,18 @@ class VideoOverlayProcessor: ObservableObject {
                 else { return }
 
                 do {
-                    try videoTrack.insertTimeRange(CMTimeRangeMake(start: CMTime.zero, duration: mainVideo.duration),
+                    let timeRange = overlay.timeRange
+                    try videoTrack.insertTimeRange(timeRange,
                                                    of: avAsset.tracks(withMediaType: .video)[0],
-                                                   at: CMTime.zero)
-                    try audioTrack.insertTimeRange(CMTimeRangeMake(start: CMTime.zero, duration: mainVideo.duration),
+                                                   at: .zero)
+                    try audioTrack.insertTimeRange(timeRange,
                                                    of: avAsset.tracks(withMediaType: .audio)[0],
-                                                   at: CMTime.zero)
+                                                   at: .zero)
                 } catch {
                     print("Failed to load first track")
                     return
                 }
                 let instruction = AVMutableVideoCompositionLayerInstruction(assetTrack: videoTrack)
-
                 let frame = overlay.frame
                 let subNaturalSize: CGSize = videoTrack.naturalSize
 
@@ -186,7 +188,7 @@ class VideoOverlayProcessor: ObservableObject {
         }
 
         exportSession.outputURL = outputURL
-        exportSession.outputFileType = AVFileType.mov
+        exportSession.outputFileType = AVFileType.mp4
         exportSession.shouldOptimizeForNetworkUse = true
         exportSession.videoComposition = videoComposition
         exportSession.exportAsynchronously { () in

@@ -34,36 +34,60 @@ enum DragState {
 
 struct DraggableView<Content>: View where Content: View {
     @GestureState private var dragState = DragState.inactive
-    @Binding var position: CGSize
-//    @Binding var width: Double
-//    @Binding var height: Double
+    @State var position: CGSize = .zero
+    @State var width: CGFloat?
+    @State var height: CGFloat?
+
     var content: () -> Content
+    var onEnd: (_ size: CGSize, _ position: CGSize) -> Void
 
     var body: some View {
-        content()
-            .opacity(dragState.isPressing ? 0.5 : 1.0)
-            .offset(x: position.width + dragState.translation.width, y: position.height + dragState.translation.height)
-            .gesture(
-                LongPressGesture(minimumDuration: 0.2)
-                    .sequenced(before: DragGesture())
-                    .updating($dragState, body: { value, state, _ in
-                        switch value {
-                        case .first(true):
-                            state = .pressing
-                        case .second(true, let drag):
-                            state = .dragging(translation: drag?.translation ?? .zero)
-                        default:
-                            break
-                        }
-                    })
-                    .onEnded({ value in
-                        guard case .second(true, let drag?) = value else {
-                            return
-                        }
-                        self.position.height += drag.translation.height
-                        self.position.width += drag.translation.width
-                    })
-            )
-            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+        ZStack(alignment: .bottomTrailing) {
+            content()
+                .offset(x: position.width + dragState.translation.width, y: position.height + dragState.translation.height)
+                .opacity(dragState.isPressing ? 0.5 : 1.0)
+                .frame(width: width, height: height)
+                .gesture(
+                    LongPressGesture(minimumDuration: 0.2)
+                        .sequenced(before: DragGesture())
+                        .updating($dragState, body: { value, state, _ in
+                            switch value {
+                            case .first(true):
+                                state = .pressing
+                            case .second(true, let drag):
+                                state = .dragging(translation: drag?.translation ?? .zero)
+                            default:
+                                break
+                            }
+                        })
+                        .onEnded({ value in
+                            guard case .second(true, let drag?) = value else {
+                                return
+                            }
+                            self.position.height += drag.translation.height
+                            self.position.width += drag.translation.width
+                            guard let width = width, let height = height else {
+                                onEnd(.zero, position)
+                                return
+                            }
+                            onEnd(.init(width: width, height: height), position)
+                        })
+                )
+
+//            Color.red
+//                .offset(x: position.width + dragState.translation.width, y: position.height + dragState.translation.height)
+//                .frame(width: 40, height: 40)
+//                .gesture(
+//                    DragGesture(minimumDistance: 10)
+//                        .onChanged({ value in
+//                            let transaltionSize = value.translation
+//                            print(value.location)
+//                            print(value.translation)
+//                            width = max(100, width + transaltionSize.width)
+//                            height = max(100, height + transaltionSize.height)
+//                            onEnd(.init(width: width, height: height), position)
+//                        })
+//                )
+        }
     }
 }

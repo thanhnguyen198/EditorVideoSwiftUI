@@ -13,12 +13,15 @@ class EditorVideoViewModel: ObservableObject {
     let action = PassthroughSubject<ActionView, Never>()
     let url: URL
     @Published var avPlayer = AVPlayer()
+    @Published var geoVideo: CGSize = .zero
     @Published var subVideoURL: URL?
     @Published var textProp: TextProp?
     @Published var positionText: CGSize = .zero
+    @Published var positionSubVideo: CGSize = .zero
+    @Published var positionImage: CGSize = .zero
     @Published var sizeText: CGSize = .zero
-    @Published var geoVideo: CGSize = .zero
     @Published var sizeSubVideo: CGSize = .zero
+    @Published var sizeImage: CGSize = .zero
     @Published var isExporting: Bool = false
     @Published var progress: Float = 0.0
     init(url: URL) {
@@ -32,14 +35,14 @@ class EditorVideoViewModel: ObservableObject {
     }
 
     func saveVideo() {
-        let outputURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("output-\(Int(Date().timeIntervalSince1970)).mov")
+        let outputURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("output-\(Int(Date().timeIntervalSince1970)).mp4")
 
         let processor = VideoOverlayProcessor(inputURL: url, outputURL: outputURL)
 
         let videoSize = processor.videoSize
 
         let videoDuration = processor.videoDuration
-
+        // TEXT
         if let textProp = textProp {
             let position = convertSize(positionText, sizeText: sizeText, fromFrame: geoVideo, toFrame: videoSize)
             let textOverlay = TextOverlay(text: textProp.text,
@@ -49,27 +52,34 @@ class EditorVideoViewModel: ObservableObject {
                                                         height: sizeText.height * position.ratio),
                                           delay: 2.0,
                                           duration: 10,
-                                          backgroundColor: .blue.withAlphaComponent(0.2),
+                                          backgroundColor: .clear,
                                           textColor: UIColor(textProp.color),
                                           font: .systemFont(ofSize: textProp.fontSize),
                                           textAlignment: .center,
                                           fontSize: textProp.fontSize * position.ratio)
             processor.addOverlay(textOverlay)
         }
+        // SUBVIDEO
         if let subVideoURL = subVideoURL {
-            let position = convertSize(positionText, sizeText: sizeSubVideo, fromFrame: geoVideo, toFrame: videoSize)
+            let position = convertSize(positionSubVideo, sizeText: sizeSubVideo, fromFrame: geoVideo, toFrame: videoSize)
             let subVideo = VideoOverlay(url: subVideoURL,
                                         frame: CGRect(x: position.size.width,
                                                       y: position.size.height,
                                                       width: sizeSubVideo.width * position.ratio,
                                                       height: sizeSubVideo.height * position.ratio),
-                                        delay: 0.0, duration: videoDuration)
-
+                                        delay: 2.0,
+                                        duration: videoDuration)
             processor.addOverlay(subVideo)
-//            processor.newoverlay(video: .init(url: url), withSecondVideo: .init(url: subVideoURL)) { exportSession in
-//                print(exportSession?.outputURL)
-//            }
         }
+        // IMAGE-STICKER
+        let position = convertSize(positionImage, sizeText: sizeImage, fromFrame: geoVideo, toFrame: videoSize)
+        let imageOverlay = ImageOverlay(image: Assets._4k_uiImage,
+                                        frame: CGRect(x: position.size.width, y: position.size.height,
+                                                      width: sizeImage.width * position.ratio, height: sizeImage.height * position.ratio),
+                                        delay: 0.0,
+                                        duration: videoDuration)
+        processor.addOverlay(imageOverlay)
+
         isExporting = true
         processor.$progress.assign(to: &$progress)
         processor.process { [weak self] exportSession in
