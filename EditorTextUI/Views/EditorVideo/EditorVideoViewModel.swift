@@ -37,7 +37,6 @@ class EditorVideoViewModel: ObservableObject {
 
     func saveVideo() {
         let outputURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("output-\(Int(Date().timeIntervalSince1970)).mp4")
-
         let processor = VideoOverlayProcessor(inputURL: url, outputURL: outputURL)
 
         let videoSize = processor.videoSize
@@ -69,7 +68,7 @@ class EditorVideoViewModel: ObservableObject {
                                                       width: sizeSubVideo.width * position.ratio,
                                                       height: sizeSubVideo.height * position.ratio),
                                         delay: 2.0,
-                                        duration: videoDuration)
+                                        duration: 5.0)
             processor.addOverlay(subVideo)
         }
         // IMAGE-STICKER

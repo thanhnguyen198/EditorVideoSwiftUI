@@ -14,7 +14,7 @@ class VideoOverlayProcessor: ObservableObject {
     let outputURL: URL
 
     var exportProgressBarTimer = Timer() // initialize timer
-    var outputPresetName: String = AVAssetExportPresetHighestQuality
+    var outputPresetName: String = AVAssetExportPresetHEVC1920x1080
     @Published var progress: Float = 0.0
 
     private var overlays: [BaseOverlay] = []
@@ -23,9 +23,10 @@ class VideoOverlayProcessor: ObservableObject {
         let asset = AVURLAsset(url: inputURL)
         let track = asset.tracks(withMediaType: AVMediaType.video).first
         if let track = track, isPortrait(track.preferredTransform) {
-            return .init(width: 1080, height: 1964)
+            let naturalSize = track.naturalSize
+            return .init(width: naturalSize.height, height: naturalSize.width)
         } else {
-            return .init(width: 1964, height: 1080)
+            return track?.naturalSize ?? .zero
         }
     }
 
@@ -100,15 +101,11 @@ class VideoOverlayProcessor: ObservableObject {
         let videoTrackTransform = compositionVideoTrack.preferredTransform
         let naturalSize: CGSize = videoSize
         if isPortrait(videoTrackTransform) {
-            let scale = max(naturalSize.width / videoTrack.naturalSize.height,
-                            naturalSize.height / videoTrack.naturalSize.width)
             let videoTransform = CGAffineTransform(rotationAngle: .pi / 2)
                 .concatenating(CGAffineTransform(translationX: naturalSize.width, y: 0))
-            layerInstruction.setTransform(videoTransform.scaledBy(x: scale, y: scale), at: .zero)
+            layerInstruction.setTransform(videoTransform, at: .zero)
         } else {
-            let scale = max(naturalSize.width / videoTrack.naturalSize.width,
-                            naturalSize.height / videoTrack.naturalSize.height)
-            layerInstruction.setTransform(videoTrackTransform.concatenating(CGAffineTransform(scaleX: scale, y: scale)), at: .zero)
+            layerInstruction.setTransform(videoTrackTransform, at: .zero)
         }
 
         overlayLayer.frame = CGRect(x: 0, y: 0, width: naturalSize.width, height: naturalSize.height)
@@ -128,7 +125,7 @@ class VideoOverlayProcessor: ObservableObject {
         videoComposition.animationTool = AVVideoCompositionCoreAnimationTool(postProcessingAsVideoLayer: videoLayer, in: overlayLayer)
 
         let instruction = AVMutableVideoCompositionInstruction()
-        instruction.timeRange = CMTimeRangeMake(start: CMTime.zero, duration: mainComposition.duration)
+        instruction.timeRange = CMTimeRangeMake(start: .zero, duration: mainComposition.duration)
         _ = mainComposition.tracks(withMediaType: AVMediaType.video)[0] as AVAssetTrack
 
         // TODO: Adding video to video
@@ -137,36 +134,52 @@ class VideoOverlayProcessor: ObservableObject {
         for overlay in overlays {
             if let overlayVideo = overlay as? VideoOverlay {
                 let avAsset = AVURLAsset(url: overlayVideo.url)
-                guard let videoTrack = mainComposition.addMutableTrack(withMediaType: .video, preferredTrackID: Int32(kCMPersistentTrackID_Invalid)),
-                      let audioTrack = mainComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: Int32(kCMPersistentTrackID_Invalid))
+                guard let videoTrack = avAsset.tracks(withMediaType: .video).first,
+                      let audioTrack = avAsset.tracks(withMediaType: .audio).first,
+                      let overlayVideoTrackComposition = mainComposition.addMutableTrack(withMediaType: .video, preferredTrackID: Int32(kCMPersistentTrackID_Invalid)),
+                      let overlayAudioTrackComposition = mainComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: Int32(kCMPersistentTrackID_Invalid))
                 else { return }
 
                 do {
-                    let timeRange = overlay.timeRange
-                    try videoTrack.insertTimeRange(timeRange,
-                                                   of: avAsset.tracks(withMediaType: .video)[0],
-                                                   at: .zero)
-                    try audioTrack.insertTimeRange(timeRange,
-                                                   of: avAsset.tracks(withMediaType: .audio)[0],
-                                                   at: .zero)
+                    let timeRange = CMTimeRangeMake(start: CMTime.zero, duration: mainVideo.duration)
+                    try overlayVideoTrackComposition.insertTimeRange(timeRange,
+                                                                     of: videoTrack,
+                                                                     at: .zero)
+                    try overlayAudioTrackComposition.insertTimeRange(timeRange,
+                                                                     of: audioTrack,
+                                                                     at: .zero)
                 } catch {
                     print("Failed to load first track")
                     return
                 }
-                let instruction = AVMutableVideoCompositionLayerInstruction(assetTrack: videoTrack)
+                let instructionSubVideo = AVMutableVideoCompositionLayerInstruction(assetTrack: overlayVideoTrackComposition)
+                let overlayStartTime = CMTime(seconds: overlay.delay, preferredTimescale: 600)
+                let durationTime = CMTime(seconds: overlay.duration, preferredTimescale: 600)
+                instructionSubVideo.setOpacity(0, at: .zero)
+                instructionSubVideo.setOpacity(1, at: overlayStartTime)
+                instructionSubVideo.setOpacity(0, at: durationTime)
+
                 let frame = overlay.frame
-                let subNaturalSize: CGSize = videoTrack.naturalSize
+                let subNaturalSize: CGSize = overlayVideoTrackComposition.naturalSize
 
-                let ratioW = frame.width / subNaturalSize.width
-                let ratioH = frame.height / subNaturalSize.height
-
-                let transform = CGAffineTransform(scaleX: ratioW, y: ratioH)
-                    .concatenating(CGAffineTransform(translationX: frame.origin.x,
-                                                     y: naturalSize.height - frame.origin.y - (subNaturalSize.height * ratioH)))
-
-                instruction.setTransform(transform, at: CMTime.zero)
-
-                subInstructions.append(instruction)
+                if isPortrait(videoTrack.preferredTransform) {
+                    let ratioW = frame.width / subNaturalSize.height
+                    let ratioH = frame.height / subNaturalSize.width
+                    let rotation = CGAffineTransform(rotationAngle: .pi / 2)
+                        .concatenating(CGAffineTransform(translationX: subNaturalSize.width, y: 0))
+                    let transform = CGAffineTransform(scaleX: ratioW, y: ratioH)
+                        .concatenating(CGAffineTransform(translationX: naturalSize.width - frame.origin.x - (subNaturalSize.width * ratioW),
+                                                         y: frame.origin.y))
+                    instructionSubVideo.setTransform(rotation.concatenating(transform), at: .zero)
+                } else {
+                    let ratioW = frame.width / subNaturalSize.width
+                    let ratioH = frame.height / subNaturalSize.height
+                    let transform = CGAffineTransform(scaleX: ratioW, y: ratioH)
+                        .concatenating(CGAffineTransform(translationX: frame.origin.x,
+                                                         y: naturalSize.height - frame.origin.y - (subNaturalSize.height * ratioH)))
+                    instructionSubVideo.setTransform(transform, at: .zero)
+                }
+                subInstructions.append(instructionSubVideo)
             }
         }
 
@@ -199,91 +212,6 @@ class VideoOverlayProcessor: ObservableObject {
 
     func addOverlay(_ overlay: BaseOverlay) {
         overlays.append(overlay)
-    }
-
-    func newoverlay(video firstAsset: AVURLAsset, withSecondVideo secondAsset: AVURLAsset, _ completionHandler: @escaping (_ exportSession: AVAssetExportSession?) -> Void) {
-        // 1 - Create AVMutableComposition object. This object will hold your AVMutableCompositionTrack instances.
-        let mixComposition = AVMutableComposition()
-
-        // 2 - Create two video tracks
-        guard let firstTrack = mixComposition.addMutableTrack(withMediaType: .video,
-                                                              preferredTrackID: Int32(kCMPersistentTrackID_Invalid)) else { return }
-        do {
-            try firstTrack.insertTimeRange(CMTimeRangeMake(start: CMTime.zero, duration: firstAsset.duration),
-                                           of: firstAsset.tracks(withMediaType: .video)[0],
-                                           at: CMTime.zero)
-        } catch {
-            print("Failed to load first track")
-            return
-        }
-
-        guard let secondTrack = mixComposition.addMutableTrack(withMediaType: .video,
-                                                               preferredTrackID: Int32(kCMPersistentTrackID_Invalid)) else { return }
-        do {
-            try secondTrack.insertTimeRange(CMTimeRangeMake(start: CMTime.zero, duration: secondAsset.duration),
-                                            of: secondAsset.tracks(withMediaType: .video)[0],
-                                            at: CMTime.zero)
-        } catch {
-            print("Failed to load second track")
-            return
-        }
-
-        // 2.1
-        let mainInstruction = AVMutableVideoCompositionInstruction()
-        mainInstruction.timeRange = CMTimeRangeMake(start: CMTime.zero, duration: CMTimeAdd(firstAsset.duration, secondAsset.duration))
-
-        // 2.2
-        let firstInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: firstTrack)
-
-        let secondInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: secondTrack)
-        let scale = CGAffineTransform(scaleX: 0.3, y: 0.3)
-        let move = CGAffineTransform(translationX: 10, y: 10)
-        secondInstruction.setTransform(scale.concatenating(move), at: CMTime.zero)
-        // 2.3
-        mainInstruction.layerInstructions = [firstInstruction, secondInstruction]
-        let mainComposition = AVMutableVideoComposition()
-        mainComposition.instructions = [mainInstruction]
-        mainComposition.frameDuration = CMTimeMake(value: 1, timescale: 30)
-
-//        let width = max(firstTrack.naturalSize.width, secondTrack.naturalSize.width)
-//        let height = max(firstTrack.naturalSize.height, secondTrack.naturalSize.height)
-
-        mainComposition.renderSize = CGSize(width: videoSize.width, height: videoSize.height)
-
-        mainInstruction.backgroundColor = UIColor.clear.cgColor
-
-        // 4 - Get path
-        guard let documentDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .long
-        dateFormatter.timeStyle = .short
-        let date = dateFormatter.string(from: Date())
-        let url = documentDirectory.appendingPathComponent("mergeVideo-\(date).mov")
-
-        // Check exists and remove old file
-        FileManager.default.removeItemIfExisted(url as URL)
-
-        // 5 - Create Exporter
-        guard let exporter = AVAssetExportSession(asset: mixComposition, presetName: AVAssetExportPresetHighestQuality) else { return }
-        exporter.outputURL = url
-        exporter.outputFileType = AVFileType.mov
-        exporter.shouldOptimizeForNetworkUse = true
-        exporter.videoComposition = mainComposition
-
-        // 6 - Perform the Export
-        exporter.exportAsynchronously {
-            DispatchQueue.main.async {
-                print("Movie complete")
-                completionHandler(exporter)
-                PHPhotoLibrary.shared().performChanges({
-                    PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url as URL)
-                }) { saved, _ in
-                    if saved {
-                        print("Saved")
-                    }
-                }
-            }
-        }
     }
 }
 

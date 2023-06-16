@@ -35,20 +35,35 @@ enum DragState {
 struct DraggableView<Content>: View where Content: View {
     @GestureState private var dragState = DragState.inactive
     @State var position: CGSize = .zero
-    @State var width: CGFloat?
-    @State var height: CGFloat?
-
+    @State var scale: CGFloat = 1.0
+    var isMedia: Bool = true
     var content: () -> Content
-    var onEnd: (_ size: CGSize, _ position: CGSize) -> Void
+    var onEnd: (_ position: CGSize) -> Void
 
     var body: some View {
+        let dragScaleGesture = DragGesture(minimumDistance: 10)
+            .onChanged { value in
+                if isMedia {
+                    let width = value.translation.width
+                    let height = value.translation.height
+                    let min = min(width, height)
+                    let max = max(width, height)
+                    var translation: CGFloat = 0
+                    if width <= 0 && height <= 0 {
+                        translation = min
+                    } else {
+                        translation = max
+                    }
+                    scale *= 1.0 + translation / 10000
+                }
+            }
         ZStack(alignment: .bottomTrailing) {
             content()
                 .offset(x: position.width + dragState.translation.width, y: position.height + dragState.translation.height)
                 .opacity(dragState.isPressing ? 0.5 : 1.0)
-                .frame(width: width, height: height)
+                .scaleEffect(scale)
                 .gesture(
-                    LongPressGesture(minimumDuration: 0.2)
+                    LongPressGesture(minimumDuration: 0.1)
                         .sequenced(before: DragGesture())
                         .updating($dragState, body: { value, state, _ in
                             switch value {
@@ -66,29 +81,13 @@ struct DraggableView<Content>: View where Content: View {
                             }
                             self.position.height += drag.translation.height
                             self.position.width += drag.translation.width
-                            guard let width = width, let height = height else {
-                                onEnd(.zero, position)
-                                return
-                            }
-                            onEnd(.init(width: width, height: height), position)
+                            onEnd(position)
                         })
                 )
-
 //            Color.red
 //                .offset(x: position.width + dragState.translation.width, y: position.height + dragState.translation.height)
-//                .frame(width: 40, height: 40)
-//                .gesture(
-//                    DragGesture(minimumDistance: 10)
-//                        .onChanged({ value in
-//                            guard let width = width, let height = height else {
-//                                return
-//                            }
-//                            let transaltionSize = value.translation
-//                            self.width = max(100, width + transaltionSize.width)
-//                            self.height = max(100, height + transaltionSize.height)
-//                            onEnd(.init(width: width, height: height), position)
-//                        })
-//                )
+//                .frame(width: 20, height: 20)
+//                .gesture(dragScaleGesture)
         }
     }
 }

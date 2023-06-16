@@ -44,7 +44,7 @@ class BaseOverlay {
     }
 
     var timeRange: CMTimeRange {
-        let timescale: Double = 1000
+        let timescale: Double = 600
 
         let startTime = CMTimeMake(value: Int64(delay * timescale), timescale: Int32(timescale))
         let durationTime = CMTimeMake(value: Int64(duration * timescale), timescale: Int32(timescale))

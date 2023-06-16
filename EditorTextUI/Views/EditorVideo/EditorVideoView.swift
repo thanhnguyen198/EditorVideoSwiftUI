@@ -8,8 +8,6 @@ struct EditorVideoView: View {
     @State var position: CGSize = .zero
     @State var showPickerVideo: Bool = false
     @State var showPickerImage: Bool = false
-    @State var width: Double = 150
-    @State var height: Double = 150
     let router: EditorVideoRouter
 
     var body: some View {
@@ -24,7 +22,7 @@ struct EditorVideoView: View {
                             }
                     }
                     // Text
-                    DraggableView {
+                    DraggableView(isMedia: false) {
                         ZStack {
                             if let textOv = viewModel.textProp {
                                 Text(textOv.text)
@@ -39,23 +37,26 @@ struct EditorVideoView: View {
                                 EmptyView()
                             }
                         }
-                    } onEnd: { _, position in
+                    } onEnd: { position in
                         viewModel.positionText = position
                     }
                     // Video
-                    DraggableView(width: width, height: height) {
+                    DraggableView {
                         ZStack {
                             if let subVideo = viewModel.subVideoURL {
                                 PlayerView(player: .init(url: subVideo), videoGravity: .resize)
+                                    .frame(width: 150, height: 150)
                                     .clipped()
                                     .id(subVideo.url.absoluteString)
+                                    .readSize { size in
+                                        viewModel.sizeSubVideo = size
+                                    }
                             } else {
                                 EmptyView()
                             }
                         }
-                    } onEnd: { size, position in
+                    } onEnd: { position in
                         viewModel.positionSubVideo = position
-                        viewModel.sizeSubVideo = size
                     }
                     // Image
                     DraggableView {
@@ -70,7 +71,7 @@ struct EditorVideoView: View {
                             }
                         }
 
-                    } onEnd: { _, position in
+                    } onEnd: { position in
                         viewModel.positionImage = position
                     }
                 }
