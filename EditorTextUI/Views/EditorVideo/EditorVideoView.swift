@@ -15,6 +15,7 @@ struct EditorVideoView: View {
     var body: some View {
         ZStack {
             VStack {
+                // Video + edit with component
                 ZStack {
                     GeometryReader { proxy in
                         PlayerView(player: viewModel.avPlayer)
@@ -56,7 +57,7 @@ struct EditorVideoView: View {
                         viewModel.positionSubVideo = position
                         viewModel.sizeSubVideo = size
                     }
-
+                    // Image
                     DraggableView {
                         ZStack {
                             if let image = viewModel.imageOverlay {
@@ -77,40 +78,8 @@ struct EditorVideoView: View {
 
                 Spacer()
 
-                HStack {
-                    ButtonEditorText(title: "Text") {
-                        Image(systemName: "character")
-                            .foregroundColor(.white)
-                            .font(.system(size: 12), weight: .bold)
-                            .scaleEffect(1.4)
-                    }
-                    .onPress {
-                        router.trigger(.addTextOverlay({ textOverlay in
-                            position = .zero
-                            viewModel.textProp = textOverlay
-                        }))
-                    }
-                    ButtonEditorText(title: "Sub Video") {
-                        Image(systemName: "video")
-                            .foregroundColor(.white)
-                            .font(.system(size: 12), weight: .bold)
-                            .scaleEffect(1.4)
-                    }
-                    .onPress {
-                        showPickerVideo.toggle()
-                    }
-                    ButtonEditorText(title: "Image") {
-                        Image(systemName: "photo")
-                            .foregroundColor(.white)
-                            .font(.system(size: 12), weight: .bold)
-                            .scaleEffect(1.4)
-                    }
-                    .onPress {
-                        showPickerImage.toggle()
-                    }
-                    Spacer()
-                }
-                .padding(.horizontal, 12)
+                // Toolbar
+                toolBarEditor
             }
             if viewModel.isExporting {
                 LoadingView(progress: viewModel.progress)
@@ -147,5 +116,42 @@ struct EditorVideoView: View {
         }, backgroundColor: .clear)
         .background(Color.black.edgesIgnoringSafeArea(.all))
         .ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+
+    var toolBarEditor: some View {
+        HStack {
+            ButtonEditorText(title: "Text") {
+                Image(systemName: "character")
+                    .foregroundColor(.white)
+                    .font(.system(size: 12), weight: .bold)
+                    .scaleEffect(1.4)
+            }
+            .onPress {
+                router.trigger(.addTextOverlay({ textOverlay in
+                    position = .zero
+                    viewModel.textProp = textOverlay
+                }))
+            }
+            ButtonEditorText(title: "Sub Video") {
+                Image(systemName: "video")
+                    .foregroundColor(.white)
+                    .font(.system(size: 12), weight: .bold)
+                    .scaleEffect(1.4)
+            }
+            .onPress {
+                showPickerVideo.toggle()
+            }
+            ButtonEditorText(title: "Image") {
+                Image(systemName: "photo")
+                    .foregroundColor(.white)
+                    .font(.system(size: 12), weight: .bold)
+                    .scaleEffect(1.4)
+            }
+            .onPress {
+                showPickerImage.toggle()
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 12)
     }
 }

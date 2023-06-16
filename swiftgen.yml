@@ -1,0 +1,30 @@
+input_dir: EditorTextUI/Resources
+output_dir: EditorTextUI/Resources/Generated/
+## XCAssets
+xcassets:
+  inputs:
+    - Assets.xcassets
+    - Colors.xcassets
+  outputs:
+    templatePath: Templates/xcassets/assets_swift5_swiftui.stencil
+    params:
+       forceProvidesNamespaces: true
+       forceFileNameEnum: true
+    output: XCAssets+Generated.swift
+## Fonts
+fonts:
+  inputs:
+    - Fonts
+  outputs:
+    templatePath: Templates/fonts/fonts_swift5_swiftui.stencil
+    output: Fonts+Generated.swift
+## Strings
+strings:
+  inputs:
+    - Localization/en.lproj
+  outputs:
+    - templateName: structured-swift5
+      params:
+        publicAccess: true
+        enumName: Strings
+      output: Strings+Generated.swift
